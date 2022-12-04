@@ -11,6 +11,27 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Read in the data for Final Project
 ```{r}
-raw_data=read.table("nba_scores.csv",sep = ",",header = TRUE)
-elo_initials=read.table("nba_initial_elos.csv",sep = ",",header = TRUE)
+raw_data = read.table("nba_scores.csv",sep = ",",header = TRUE)
+elo_initials = read.table("nba_initial_elos.csv",sep = ",",header = TRUE)
+scores = raw_data[which(raw_data$season > 1999),]
+```
+
+## HFA Calclulation
+```{r}
+home_wins = 0
+games = 0
+first_game_index = 1
+
+# Iterate through games - first index can be changed to eliminate early seasons where scores are extreme
+for(i in first_game_index:nrow(scores)) {  
+  # Count number of games that do not end in ties
+  if(scores$home_score[i] != scores$away_score[i]) { games = games + 1 }
+  
+  # Count number of games where home team wins
+  if(scores$home_score[i] > scores$away_score[i]) { home_wins = home_wins + 1 }
+}
+
+home_win_prob = home_wins / games  # Calculate home win probability where outcome was not a tie
+hfa = -400*log10(1/home_win_prob - 1)  # Calculate number of Elo points added to home team
+hfa
 ```
