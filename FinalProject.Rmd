@@ -13,10 +13,10 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 raw_data = read.table("nba_scores.csv",sep = ",",header = TRUE)
 elo_initials = read.table("nba_initial_elos.csv",sep = ",",header = TRUE)
-#scores = raw_data[which(raw_data$season > 1999),]
+scores = raw_data[which(raw_data$season > 1999),]
 ```
 
-## HFA Calclulation
+## HFA & Weight Calclulation for 2000
 ```{r}
 home_wins = 0
 games = 0
@@ -33,8 +33,88 @@ for(i in first_game_index:nrow(scores)) {
 
 home_win_prob = home_wins / games  # Calculate home win probability where outcome was not a tie
 hfa = -400*log10(1/home_win_prob - 1)  # Calculate number of Elo points added to home team
-hfa_2000 = hfa
-hfa_2000
+
+
+starting_weight = 0  # Lower bound for weight ranges to be tested - generally set equal to 0
+iterations = 100  # Number of k values to test
+step_size = 0.1  # Amount to increment k by at each step
+first_game_index = 1
+
+# Initialize data frame to store k values and corresponding error
+errors = data.frame(matrix(ncol = 2, nrow = iterations))
+colnames(errors) = c("weight", "error")
+errors$weight = starting_weight + (1:iterations)*step_size
+errors$error = NA
+
+# Iterate through all potential k values that are being tested
+for(counter in 1:iterations) {
+  weight = starting_weight + counter*step_size  # Calculate k value for current iteration
+  print(weight)
+  error = 0  # Reset error for current iteration
+  elos = read.table("nba_initial_elos.csv", header=TRUE, sep=",")  # Reset initial Elo ratings
+  
+  # Iterate through games - first index can be changed to eliminate early seasons in a league where early results tend to be extreme
+  for(i in first_game_index:nrow(scores)) {  
+    # Find indices corresponding to home and away teams for current game
+    home_index = which(elos$team == scores$home_team[i])
+    away_index = which(elos$team == scores$away_team[i])
+    
+    # Find home and away team Elo ratings
+    home_elo = elos$rating[home_index]
+    away_elo = elos$rating[away_index]
+
+    # Calculate home team win probability
+    win_prob = 1 / (10^((away_elo - (home_elo + hfa*scores$neutral[i]))/400) + 1)
+    
+    # Calculate actual margin of victory - must be positive
+    score_diff = abs(scores$home_score[i] - scores$away_score[i])  
+  
+    # Determine home team result
+    if(scores$home_score[i] > scores$away_score[i]) { 
+      home_result = 1  # Home team wins
+    } else if(scores$home_score[i] < scores$away_score[i]) { 
+      home_result = 0  # Home team loses
+    } else { 
+      home_result = 0.5  # Tie
+    }
+    
+    # Add squared error between home result and predicted probability of home team winning to SSE
+    error = error + (home_result - win_prob)^2
+    
+    # Calculate amount each team's Elo rating is adjusted by
+    home_elo_adjustment = weight * log(score_diff + 1) * (home_result - win_prob)
+  
+    # Adjust Elo ratings - add point to winner and subtract points from loser
+    elos$rating[home_index] = elos$rating[home_index] + home_elo_adjustment
+    elos$rating[away_index] = elos$rating[away_index] - home_elo_adjustment
+
+    # Adjust Elo ratings at end of season to regress 1/3 of the way towards 1500
+    if(i < nrow(scores) && scores$season[i+1] > scores$season[i]) {
+      for(j in 1:nrow(elos)) {
+        if(scores$season[i] >= elos$inaugural_season[j]) {
+          elos$rating[j] = elos$rating[j] - (elos$rating[j] - 1500)/3
+        }
+      }
+    
+      existing_teams = elos[which(elos$inaugural_season <= (scores$season[i] + 1)),]
+      expansion_adjustment = -1*(mean(existing_teams$rating) - 1500)
+    
+      for(j in 1:nrow(elos)) {
+        if((scores$season[i] + 1) >= elos$inaugural_season[j]) {
+          elos$rating[j] = elos$rating[j] + expansion_adjustment
+        }
+      }
+    }
+  }
+  errors$error[counter] = error  # Store error for current iteration
+}
+
+# Create plot of SSE against k-values
+plot(errors$weight, errors$error, xlab = "k Value", ylab = "Sum of Squared Errors")
+
+# Choose and print optimal weight based on value that had the lowest SSE
+weight = errors$weight[which(errors$error == min(errors$error))]
+print(weight)
 ```
 ```{r}
 home_wins = 0
