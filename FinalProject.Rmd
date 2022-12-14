@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 raw_data = read.table("nba_scores.csv",sep = ",",header = TRUE)
 elo_initials = read.table("nba_initial_elos.csv",sep = ",",header = TRUE)
-scores = raw_data[which(raw_data$season > 1999),]
+
 ```
 
 ## HFA & Weight Calclulation for 21st century
@@ -120,11 +120,42 @@ for (x in year_list){
 print(hfa_list)
 print(weight_list)
 ```
+## SAVE weight and hfa into csv fie
 ```{r}
 write.table(as.data.frame(hfa_list),file="hfa.csv", quote=F,sep=",",row.names=F)
 write.table(as.data.frame(weight_list),file="weight.csv", quote=F,sep=",",row.names=F)
 
 ```
+## Read data from csv;
+```{r}
+hfa_list=read.csv("hfa.csv")
+weight_list=read.csv("weight.csv")
+
+
+```
+
+
+
+
+```{r}
+
+scores = raw_data[which(raw_data$season > 1999),]
+team_name=unique(scores$home_team)
+Adjustment<-cbind(hfa_list,weight_list)
+
+
+
+
+```
+
+```{r}
+
+
+```
+```{r}
+
+```
+
 
 
 ## Elo Ratings Calclulation for 21st century
