@@ -25,7 +25,7 @@ for (x in year_list){
   home_wins = 0
   games = 0
   first_game_index = 1
-  scores = raw_data[which(raw_data$season>=1979&raw_data$season<=x),] 
+  scores = raw_data[which(raw_data$season==x),] 
   # Iterate through games - first index can be changed to eliminate early seasons where scores are extreme
   for(i in first_game_index:nrow(scores)) {  
     # Count number of games that do not end in ties
@@ -126,7 +126,7 @@ write.table(as.data.frame(hfa_list),file="hfa.csv", quote=F,sep=",",row.names=F)
 write.table(as.data.frame(weight_list),file="weight.csv", quote=F,sep=",",row.names=F)
 
 ```
-## Read data from csv;
+## Read HFA and wight data from csv;
 ```{r}
 hfa_list=read.csv("hfa.csv")
 weight_list=read.csv("weight.csv")
@@ -136,7 +136,7 @@ weight_list=read.csv("weight.csv")
 
 
 
-
+## Set up 
 ```{r}
 
 scores = raw_data[which(raw_data$season > 1999),]
@@ -151,8 +151,8 @@ Adjustment<-cbind(hfa_list,weight_list)
 ```{r}
 
 
-```
-```{r}
+
+
 
 ```
 
@@ -160,9 +160,140 @@ Adjustment<-cbind(hfa_list,weight_list)
 
 ## Elo Ratings Calclulation for 21st century
 ```{r}
+overall_result=list()
+for(teamN in team_name){
+  
+  
+
+inital_year=2000
+stack=list()
+
+# Optimal weight from code above. If the above code is run first, the line below can be commented out. Otherwise, you can type the optimal k-value below without needing to run the chunk of code above.
+for(i in 1:nrow(Adjustment)){
+  
+
+
+weight = Adjustment[i,"weight_list"]
+hfa =Adjustment[i,"hfa_list"]
+
+# Select team and season to follow for a period of time
+team = teamN
+first_season = inital_year
+last_season = inital_year
+
+inital_year=inital_year+1
+
+# Read in initial team Elo ratings and history of games
+elos = read.table("nba_initial_elos.csv", header=TRUE, sep=",")
+scores =raw_data[which(raw_data$season<=first_season),] 
+
+# Create data frame to store information for team specified above
+team_results = data.frame(matrix(ncol = 8, nrow = 0))
+colnames(team_results) = c("opponent", "pregame_elo", "win_probability", "result", "team_score", "opponent_score", "elo_adjustment", "postgame_elo")
+
+# Iterate through all games in the sport's history
+for(i in 1:nrow(scores)) {
+  # Find indices corresponding to home and away teams for current game
+  home_index = which(elos$team == scores$home_team[i])
+  away_index = which(elos$team == scores$away_team[i])
+  
+  # Find home and away team Elo ratings
+  home_elo = elos$rating[home_index]
+  away_elo = elos$rating[away_index]
+
+  # Calculate home team win probability
+  win_prob = 1 / (10^((away_elo - (home_elo + hfa*scores$neutral[i]))/400) + 1)
+
+  # Calculate actual margin of victory - must be positive
+  score_diff = abs(scores$home_score[i] - scores$away_score[i])   
+  
+  # Determine home team result
+  if(scores$home_score[i] > scores$away_score[i]) { 
+    home_result = 1  # Home team wins
+  } else if(scores$home_score[i] < scores$away_score[i]) { 
+    home_result = 0  # Home team loses
+  } else { 
+    home_result = 0.5  # Tie
+  }
+  
+  # Calculate amount each team's Elo rating is adjusted by
+  home_elo_adjustment = weight * log(score_diff + 1) * (home_result - win_prob)
+  
+  # Adjust Elo ratings - add point to winner and subtract points from loser
+  elos$rating[home_index] = elos$rating[home_index] + home_elo_adjustment
+  elos$rating[away_index] = elos$rating[away_index] - home_elo_adjustment
+  
+  # Add game information to team result data frame for each team game of the team specified above if team and season both match
+  if(scores$season[i] >= first_season & scores$season[i] <= last_season & (scores$home_team[i] == team | scores$away_team[i] == team)) {
+    if(scores$home_team[i] == team) {  # If specified team was at home
+      team_results[nrow(team_results) + 1,] = c(scores$away_team[i], elos$rating[home_index] - home_elo_adjustment, win_prob, home_result, scores$home_score[i], scores$away_score[i], home_elo_adjustment, elos$rating[home_index])
+    } else {  # If specified team was away
+      team_results[nrow(team_results) + 1,] = c(scores$home_team[i], elos$rating[away_index] + home_elo_adjustment, 1-win_prob, 1-home_result, scores$away_score[i], scores$home_score[i], -1*home_elo_adjustment, elos$rating[away_index])
+    }
+  }
+  
+  # Adjust Elo ratings at end of season to regress 1/3 of the way towards 1500
+  if(i < nrow(scores) && scores$season[i+1] > scores$season[i]) {  # New season
+    for(j in 1:nrow(elos)) {  # For each team
+      if(scores$season[i] >= elos$inaugural_season[j]) {  # Check if team existed
+        # Move each team's Elo rating back towards 1500 by 1/3 of the difference
+        elos$rating[j] = elos$rating[j] - (elos$rating[j] - 1500)/3
+      }
+    }
+    
+    # Identify all teams that existed at beginning of following season
+    existing_teams = elos[which(elos$inaugural_season <= (scores$season[i] + 1)),]
+    
+    # Calculate amount each team's Elo rating must be adjusted by to make mean 1500
+    expansion_adjustment = -1*(mean(existing_teams$rating) - 1500)
+    
+    # Perform expansion adjustment on teams that existed at beginning of following season
+    for(j in 1:nrow(elos)) {  # For each team
+      if((scores$season[i] + 1) >= elos$inaugural_season[j]) {  # Check if team existed
+        elos$rating[j] = elos$rating[j] + expansion_adjustment  # Update ratings if so
+      }
+    }
+  }
+}
+temp=transform(team_results,postgame_elo=as.numeric(postgame_elo))
+stack=append(stack,mean(temp$postgame_elo))
+
+
+
+
+
+}
+overall_result=append(overall_result,stack)
+
+
+
+}
 
 ```
+
+## clean elo rating for each team and store everything in to df
+```{r}
+df=data.frame(matrix(ncol=30,nrow=21))
+colnames(df)=team_name
+team_number=1
+row=1
+for(i in 1:length(overall_result)){
+  df[row,team_number]=overall_result[i]
+  row=row+1
+  if(i%%21==0){
+    team_number=team_number+1
+    row=1
+  }
+ 
+}
+
+```
+
+```{r}
+df
+```
+
 
 ## 
-```{r}
-```
+
+
