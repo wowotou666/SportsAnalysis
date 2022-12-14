@@ -293,6 +293,26 @@ df
 write.csv(df,"elo.csv",row.names = FALSE)
 ```
 
+```{r}
+df=read.csv("elo.csv")
+
+
+```
+## Clean data and transpose
+```{r}
+library(data.table)
+df_t=transpose(df)
+df_t=cbind(team_name,df_t)
+
+colnames(df_t)=c("team","2000":"2020")
+```
+
+```{r}
+df_t
+
+```
+
+
 
 
 
