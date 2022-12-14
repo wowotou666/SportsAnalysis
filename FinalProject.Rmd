@@ -25,7 +25,7 @@ for (x in year_list){
   home_wins = 0
   games = 0
   first_game_index = 1
-  scores = raw_data[which(raw_data$season == x),] 
+  scores = raw_data[which(raw_data$season>=1979&raw_data$season<=x),] 
   # Iterate through games - first index can be changed to eliminate early seasons where scores are extreme
   for(i in first_game_index:nrow(scores)) {  
     # Count number of games that do not end in ties
@@ -120,9 +120,16 @@ for (x in year_list){
 print(hfa_list)
 print(weight_list)
 ```
+```{r}
+write.table(as.data.frame(hfa_list),file="hfa.csv", quote=F,sep=",",row.names=F)
+write.table(as.data.frame(weight_list),file="weight.csv", quote=F,sep=",",row.names=F)
+
+```
+
 
 ## Elo Ratings Calclulation for 21st century
 ```{r}
+
 ```
 
 ## 
