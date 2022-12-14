@@ -148,25 +148,16 @@ Adjustment<-cbind(hfa_list,weight_list)
 
 ```
 
-```{r}
-
-
-
-
-
-```
-
-
 
 ## Elo Ratings Calclulation for 21st century
 ```{r}
-overall_result=list()
+stack=list()
 for(teamN in team_name){
   
   
 
 inital_year=2000
-stack=list()
+
 
 # Optimal weight from code above. If the above code is run first, the line below can be commented out. Otherwise, you can type the optimal k-value below without needing to run the chunk of code above.
 for(i in 1:nrow(Adjustment)){
@@ -263,7 +254,7 @@ stack=append(stack,mean(temp$postgame_elo))
 
 
 }
-overall_result=append(overall_result,stack)
+
 
 
 
@@ -277,8 +268,8 @@ df=data.frame(matrix(ncol=30,nrow=21))
 colnames(df)=team_name
 team_number=1
 row=1
-for(i in 1:length(overall_result)){
-  df[row,team_number]=overall_result[i]
+for(i in 1:length(stack)){
+  df[row,team_number]=stack[i]
   row=row+1
   if(i%%21==0){
     team_number=team_number+1
@@ -286,12 +277,24 @@ for(i in 1:length(overall_result)){
   }
  
 }
+## Remove nan value in the elo rating
+df[1,30]=1400
+df[2,30]=1400
 
 ```
+
 
 ```{r}
 df
+
 ```
+## Save elo into csv file
+```{r}
+write.csv(df,"elo.csv",row.names = FALSE)
+```
+
+
+
 
 
 ## 
