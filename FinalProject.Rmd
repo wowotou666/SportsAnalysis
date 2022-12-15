@@ -281,6 +281,7 @@ for(i in 1:length(stack)){
 df[1,30]=1400
 df[2,30]=1400
 
+
 ```
 
 
@@ -293,10 +294,92 @@ df
 write.csv(df,"elo.csv",row.names = FALSE)
 ```
 
+```{r}
+df=read.csv("elo.csv")
+
+df[3,"Charlotte.Hornets"]=1400
+df[4,"Charlotte.Hornets"]=1400
+
+
+```
+## Clean data and transpose
+```{r}
+library(data.table)
+df_t=transpose(df)
+df_t=cbind(team_name,df_t)
+
+colnames(df_t)=c("team","2000":"2020")
+```
+
+```{r}
+df_t
+
+```
+```{r}
+
+```
+
+## Analysize data
+```{r}
+mean_stack=list()
+sd_stack=list()
+median_stack=list()
+for(i in colnames(df)){
+  mean_stack=append(mean_stack,mean(df[,i]))
+  sd_stack=append(sd_stack,sd(df[,i]))
+  median_stack=append(median_stack,median(df[,i]))
+  
+  
+}
+
+```
+
+## Get Descriptive Statistics
+```{r}
+mean_df=as.data.frame(do.call(rbind,mean_stack))
+colnames(mean_df)="mean"
+sd_df=as.data.frame(do.call(rbind,sd_stack))
+colnames(sd_df)="sd"
+median_df=as.data.frame(do.call(rbind,median_stack))
+colnames(median_df)="median"
+descriptive_stat=cbind(df_t[,1],mean_df,sd_df,median_df)
+colnames(descriptive_stat)=c("team","mean","sd","median")
+
+
+
+```
+## store the Descriptive Statistics
+```{r}
+write.csv(descriptive_stat,"descriptive.csv",row.names = FALSE)
+```
+## import Descriptive Statistics
+```{r}
+descriptive_stat=read.csv("descriptive.csv")
+
+
+```
+
+## Create plot of Elo ratings for different team from 2000-2020
+```{r}
+TEAM=colnames(df)
+```
+
+
+```{r}
+library(ggplot2)
+df$year=2000:2020
+for(i in TEAM){
+
+ plot(df[,i],type = "l",xlab = "Year from 2000 to 2020",  ylab = "Elo Rating",main = paste("Team: ",i))
+  axis(1,df$year)
+}
+
+
+```
 
 
 
 
-## 
+
 
 
