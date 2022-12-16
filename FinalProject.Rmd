@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## Read in the data for Final Project
+
 ```{r}
 raw_data = read.table("nba_scores.csv",sep = ",",header = TRUE)
 elo_initials = read.table("nba_initial_elos.csv",sep = ",",header = TRUE)
@@ -17,6 +18,7 @@ elo_initials = read.table("nba_initial_elos.csv",sep = ",",header = TRUE)
 ```
 
 ## HFA & Weight Calclulation for 21st century
+
 ```{r}
 year_list = c(2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020)
 # list for saving hfa and weight in different years
@@ -123,16 +125,23 @@ print(weight_list)
 ```
 
 ## SAVE weight and hfa into csv fie(The calculation takes long time so save it into csv file for later use)
+
 ```{r}
 write.table(as.data.frame(hfa_list),file="hfa.csv", quote=F,sep=",",row.names=F)
 write.table(as.data.frame(weight_list),file="weight.csv", quote=F,sep=",",row.names=F)
 
+```
+
+## Read HFA and wight data from csv;
+```{r}
 ## Read HFA and wight data from csv
 hfa_list=read.csv("hfa.csv")
 weight_list=read.csv("weight.csv")
 ```
 
-## Set up 
+
+## Set up
+
 ```{r}
 #Only use data from 2000 to 2020
 scores = raw_data[which(raw_data$season > 1999),]
@@ -143,6 +152,7 @@ Adjustment<-cbind(hfa_list,weight_list)
 ```
 
 ## Elo Ratings Calclulation for 21st century
+
 ```{r}
 # Use list to store average elo ratings for each year from 2000 to 2020
 stack=list()
@@ -244,6 +254,7 @@ stack=append(stack,mean(temp$postgame_elo))
 ```
 
 ## Clean elo rating for each team and store everything in to df
+
 ```{r}
 # Create a dataframe that contains teams' name and their elo rating for each year
 df=data.frame(matrix(ncol=30,nrow=21))
@@ -269,14 +280,24 @@ df[4,"Charlotte Hornets"]=1400
 print(df)
 ```
 
-## Save elo into csv file and import elo data
+
+```{r}
+df
+
+```
+
+## Save elo into csv file
 ```{r}
 write.csv(df,"elo.csv",row.names = FALSE)
 
+
+# import elo data
+```{r}
 df=read.csv("elo.csv")
 ```
 
 ## Analysize data store mean, median and sd in the list
+
 ```{r}
 # List for storing mean,median,and sd
 mean_stack=list()
@@ -292,6 +313,7 @@ for(i in colnames(df)){
 ```
 
 ## Get Descriptive Statistics and store them in the descriptive dataframe
+
 ```{r}
 # Store everything in the descriptive_stat dataframe
 mean_df=as.data.frame(do.call(rbind,mean_stack))
@@ -304,12 +326,19 @@ descriptive_stat=cbind(colnames(df),mean_df,sd_df,median_df)
 colnames(descriptive_stat)=c("team","mean","sd","median")
 ```
 
-## store and import the Descriptive Statistics
+
+## store the Descriptive Statistics
+
 ```{r}
 write.csv(descriptive_stat,"descriptive.csv",row.names = FALSE)
+```
 
+## import Descriptive Statistics
+
+```{r}
 descriptive_stat=read.csv("descriptive.csv")
 ```
+
 
 ## Reset the team name since the names have some changes
 ```{r}
@@ -317,6 +346,7 @@ team_name=colnames(df)
 ```
 
 ## Create plot of Elo ratings for different team from 2000-2020
+
 ```{r}
 library(ggplot2)
 
@@ -330,6 +360,7 @@ for(i in team_name){
 ```
 
 ## Calculate autocrrelation and durbinWatsontest for the linear model
+
 ```{r}
 library(car)
 
@@ -346,13 +377,14 @@ for (i in team_name){
 ```
 
 ## Get optimal order of autoregressive model
+
 ```{r}
 library(car)
 # Create a list to store the optimal order
 opt_order=list()
 for(i in team_name){
   # Construct the autoregressive model
-  model_time=ar.ols(df[,i],order.max = 9, demean = F, intercept = T)
+  model_time=ar.ols(df[,i],order.max = 6, demean = F, intercept = T)
   # formating
   cat(paste("\nTeam: ",i),"\n")
   cat("\n")
@@ -364,6 +396,7 @@ for(i in team_name){
   
 }
 ```
+
 
 ## Durbin-Watson test statistic and model
 ```{r}
@@ -430,6 +463,7 @@ cat("\n")
 ```
 
 # Get the prediction
+
 ```{r}
 # convert list to matrix
 predict_result=do.call(rbind, predict_result)
@@ -444,11 +478,3 @@ predict_result=as.data.frame(predict_result)
 predict_result = predict_result %>% `rownames<-`( NULL )
 predict_result
 ```
-
-
-
-
-
-
-
-
