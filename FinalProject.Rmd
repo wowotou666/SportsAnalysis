@@ -19,6 +19,7 @@ elo_initials = read.table("nba_initial_elos.csv",sep = ",",header = TRUE)
 ## HFA & Weight Calclulation for 21st century
 ```{r}
 year_list = c(2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020)
+# list for saving hfa and weight in different years
 hfa_list = c()
 weight_list = c()
 for (x in year_list){
@@ -120,7 +121,7 @@ for (x in year_list){
 print(hfa_list)
 print(weight_list)
 ```
-## SAVE weight and hfa into csv fie
+## SAVE weight and hfa into csv fie(The calculation takes long time so save it into csv file for later use)
 ```{r}
 write.table(as.data.frame(hfa_list),file="hfa.csv", quote=F,sep=",",row.names=F)
 write.table(as.data.frame(weight_list),file="weight.csv", quote=F,sep=",",row.names=F)
@@ -138,9 +139,11 @@ weight_list=read.csv("weight.csv")
 
 ## Set up 
 ```{r}
-
+#Only use data from 2000 to 2020
 scores = raw_data[which(raw_data$season > 1999),]
+#Get all the team name
 team_name=unique(scores$home_team)
+#Combine hfa and weight into dataframe
 Adjustment<-cbind(hfa_list,weight_list)
 
 
@@ -151,6 +154,7 @@ Adjustment<-cbind(hfa_list,weight_list)
 
 ## Elo Ratings Calclulation for 21st century
 ```{r}
+# Use list to store average elo ratings for each year from 2000 to 2020
 stack=list()
 for(teamN in team_name){
   
@@ -246,7 +250,9 @@ for(i in 1:nrow(scores)) {
     }
   }
 }
+# Change data type to numeric
 temp=transform(team_results,postgame_elo=as.numeric(postgame_elo))
+# Store the elo into the list
 stack=append(stack,mean(temp$postgame_elo))
 
 
@@ -262,8 +268,9 @@ stack=append(stack,mean(temp$postgame_elo))
 
 ```
 
-## clean elo rating for each team and store everything in to df
+## Clean elo rating for each team and store everything in to df
 ```{r}
+# Create a dataframe that contains teams' name and their elo rating for each year
 df=data.frame(matrix(ncol=30,nrow=21))
 colnames(df)=team_name
 team_number=1
@@ -278,8 +285,11 @@ for(i in 1:length(stack)){
  
 }
 ## Remove nan value in the elo rating
+## Since these nan values are caused by no games or team reorganize so we initial it as the initial elo ratings
 df[1,30]=1400
 df[2,30]=1400
+df[3,"Charlotte Hornets"]=1400
+df[4,"Charlotte Hornets"]=1400
 
 
 ```
@@ -294,36 +304,20 @@ df
 write.csv(df,"elo.csv",row.names = FALSE)
 ```
 
+# import elo data
 ```{r}
 df=read.csv("elo.csv")
-
-df[3,"Charlotte.Hornets"]=1400
-df[4,"Charlotte.Hornets"]=1400
-
-
-```
-## Clean data and transpose
-```{r}
-library(data.table)
-df_t=transpose(df)
-df_t=cbind(team_name,df_t)
-
-colnames(df_t)=c("team","2000":"2020")
 ```
 
-```{r}
-df_t
 
-```
+## Analysize data store mean, median and sd in the list
 ```{r}
-
-```
-
-## Analysize data
-```{r}
+# List for storing mean,median,and sd
 mean_stack=list()
 sd_stack=list()
 median_stack=list()
+
+# Calculate mean, median,and sd
 for(i in colnames(df)){
   mean_stack=append(mean_stack,mean(df[,i]))
   sd_stack=append(sd_stack,sd(df[,i]))
@@ -334,15 +328,16 @@ for(i in colnames(df)){
 
 ```
 
-## Get Descriptive Statistics
+## Get Descriptive Statistics and store them in the descriptive dataframe
 ```{r}
+# Store everything in the descriptive_stat dataframe
 mean_df=as.data.frame(do.call(rbind,mean_stack))
 colnames(mean_df)="mean"
 sd_df=as.data.frame(do.call(rbind,sd_stack))
 colnames(sd_df)="sd"
 median_df=as.data.frame(do.call(rbind,median_stack))
 colnames(median_df)="median"
-descriptive_stat=cbind(df_t[,1],mean_df,sd_df,median_df)
+descriptive_stat=cbind(colnames(df),mean_df,sd_df,median_df)
 colnames(descriptive_stat)=c("team","mean","sd","median")
 
 
@@ -359,16 +354,19 @@ descriptive_stat=read.csv("descriptive.csv")
 
 ```
 
-## Create plot of Elo ratings for different team from 2000-2020
+
 ```{r}
-TEAM=colnames(df)
+# Reset the team name since the names have some changes
+team_name=colnames(df)
 ```
 
-
+## Create plot of Elo ratings for different team from 2000-2020
 ```{r}
 library(ggplot2)
+
 df$year=2000:2020
-for(i in TEAM){
+#Create plot of Elo ratings for different team from 2000-2020
+for(i in team_name){
 
  plot.ts(df[,i],xlab = "Year from 2000 to 2020",  ylab = "Elo Rating",main = paste("Team: ",i))
   #axis(1,df$year)
@@ -376,15 +374,16 @@ for(i in TEAM){
 
 
 ```
-## autocrrelation
+## Calculate autocrrelation and durbinWatsontest for the linear model
 ```{r}
 library(car)
 
-for (i in TEAM){
+for (i in team_name){
   cat(paste("Team: ",i))
   cat("\n")
+  #Construct the linear model
   cur_model=lm(df[,i]~df[,"year"])
-  
+  # formating
   print(durbinWatsonTest(cur_model))
   cat("\n")
   cat("\n")
@@ -393,19 +392,21 @@ for (i in TEAM){
 ```
 
 
-## Get optimal order of model
-
+## Get optimal order of autoregressive model
 ```{r}
 library(car)
+# Create a list to store the optimal order
 opt_order=list()
-for(i in TEAM){
-  
+for(i in team_name){
+  # Construct the autoregressive model
   model_time=ar.ols(df[,i],order.max = 9, demean = F, intercept = T)
+  # formating
   cat(paste("\nTeam: ",i),"\n")
   cat("\n")
   print(model_time)
   cat("\n")
   cat("\n")
+  # store the order into list
  opt_order=append(opt_order,model_time$order)
   
 }
@@ -413,45 +414,62 @@ for(i in TEAM){
 ## Durbin-Watson test statistic and model
 
 ```{r}
-result=list()
 library("tidyverse")
-#opt_order
-count=1
+# create a list to store the prediction for the next year average elo ratings
+predict_result=list()
 
-for(i in TEAM){
+#index for the optimal order list
+count=1
+# loop to go over each team
+for(i in team_name){
   
-group=list()
+  # create a list to store the each lag column like lag1, lag2...
+  group=list()
+  
+  # each team's elo ratings dataframe
   current_team=df[i]
+  
+  # optimal order
   counter<-opt_order[[count]]
  
+  # create lag column based on the optimal order
   for(j in 1:counter){
-
+    # create the lag column using dplyr
     current_team<-current_team %>%
     dplyr::mutate("lag{j}":=lag(df[,i],n=j,default=NA))
+    
+    # construct the lag column name string for later use and store it in the group list
     temp=paste("lag",j,sep = "")
     group=append(group,temp)
- }
+  }
+  # go to the next optimal order for the next team
   count=count+1
 
- 
+ # construct the model formula to general model
   mymodel<-as.formula(paste(i,paste(group,collapse = "+"),sep = "~"))
 
 
-  #current_team=subset(select(current_team,2:ncol(current_team)))
+ # use model lm function and model formula to generate the model
   current_model=lm(mymodel,data=current_team)
-cat(paste("Team: ",i))
+  # formmating
+  cat(paste("Team: ",i))
 
-cat("\n")
-print(summary(current_model))
+  cat("\n")
+  # print the summary of the model
+  print(summary(current_model))
+  
+  # get the prediction for the next year elo ratings 
+  prediction=tail(current_team,n=1)
 
-prediction=tail(current_team,n=1)
+  cat("The prediction for 2021 is the following\n")
+  # output the predicted next year elo ratings
+  print(predict(current_model,prediction))
+  # store the predicted result into list
+  predict_result=append(predict_result,predict(current_model,prediction))
 
-cat("The prediction for 2021 is the following\n")
-
-print(predict(current_model,prediction))
-
-cat("\n")
-print(durbinWatsonTest(current_model))
+  cat("\n")
+  # run the durbinwatsonTest
+  print(durbinWatsonTest(current_model))
 
 
 
@@ -460,6 +478,26 @@ cat("\n")
 cat("\n")
 
 }
+
+```
+
+
+
+
+# Get the prediction
+```{r}
+# convert list to matrix
+predict_result=do.call(rbind, predict_result)
+# rename column name
+colnames(predict_result)="Predict"
+# add team name
+predict_result=cbind(team_name,predict_result)
+
+# convert matrix to dataframe
+predict_result=as.data.frame(predict_result)
+# remove row name
+predict_result = predict_result %>% `rownames<-`( NULL )
+predict_result
 
 ```
 
