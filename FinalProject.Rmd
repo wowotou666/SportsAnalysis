@@ -370,12 +370,85 @@ library(ggplot2)
 df$year=2000:2020
 for(i in TEAM){
 
- plot(df[,i],type = "l",xlab = "Year from 2000 to 2020",  ylab = "Elo Rating",main = paste("Team: ",i))
-  axis(1,df$year)
+ plot.ts(df[,i],xlab = "Year from 2000 to 2020",  ylab = "Elo Rating",main = paste("Team: ",i))
+  #axis(1,df$year)
 }
 
 
 ```
+
+
+
+## Get optimal order of model
+
+```{r}
+library(car)
+opt_order=list()
+for(i in TEAM){
+  
+  model_time=ar.ols(df[,i],order.max = 9, demean = F, intercept = T)
+  cat(paste("\nTeam: ",i),"\n")
+  cat("\n")
+  print(model_time)
+  cat("\n")
+  cat("\n")
+ opt_order=append(opt_order,model_time$order)
+  
+}
+```
+## Durbin-Watson test statistic and model
+
+```{r}
+result=list()
+library("tidyverse")
+#opt_order
+count=1
+
+for(i in TEAM){
+  
+group=list()
+  current_team=df[i]
+  counter<-opt_order[[count]]
+ 
+  for(j in 1:counter){
+
+    current_team<-current_team %>%
+    dplyr::mutate("lag{j}":=lag(df[,i],n=j,default=NA))
+    temp=paste("lag",j,sep = "")
+    group=append(group,temp)
+ }
+  count=count+1
+
+ 
+  mymodel<-as.formula(paste(i,paste(group,collapse = "+"),sep = "~"))
+
+
+  #current_team=subset(select(current_team,2:ncol(current_team)))
+  current_model=lm(mymodel,data=current_team)
+cat(paste("Team: ",i))
+
+cat("\n")
+print(summary(current_model))
+
+prediction=tail(current_team,n=1)
+
+cat("The prediction for 2021 is the following\n")
+
+print(predict(current_model,prediction))
+
+cat("\n")
+print(durbinWatsonTest(current_model))
+
+
+
+
+cat("\n")
+cat("\n")
+
+}
+
+```
+
 
 
 
