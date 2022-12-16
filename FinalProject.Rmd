@@ -376,7 +376,21 @@ for(i in TEAM){
 
 
 ```
+## autocrrelation
+```{r}
+library(car)
 
+for (i in TEAM){
+  cat(paste("Team: ",i))
+  cat("\n")
+  cur_model=lm(df[,i]~df[,"year"])
+  
+  print(durbinWatsonTest(cur_model))
+  cat("\n")
+  cat("\n")
+}
+
+```
 
 
 ## Get optimal order of model
