@@ -121,21 +121,16 @@ for (x in year_list){
 print(hfa_list)
 print(weight_list)
 ```
+
 ## SAVE weight and hfa into csv fie(The calculation takes long time so save it into csv file for later use)
 ```{r}
 write.table(as.data.frame(hfa_list),file="hfa.csv", quote=F,sep=",",row.names=F)
 write.table(as.data.frame(weight_list),file="weight.csv", quote=F,sep=",",row.names=F)
 
-```
-## Read HFA and wight data from csv;
-```{r}
+## Read HFA and wight data from csv
 hfa_list=read.csv("hfa.csv")
 weight_list=read.csv("weight.csv")
-
-
 ```
-
-
 
 ## Set up 
 ```{r}
@@ -145,12 +140,7 @@ scores = raw_data[which(raw_data$season > 1999),]
 team_name=unique(scores$home_team)
 #Combine hfa and weight into dataframe
 Adjustment<-cbind(hfa_list,weight_list)
-
-
-
-
 ```
-
 
 ## Elo Ratings Calclulation for 21st century
 ```{r}
@@ -158,15 +148,10 @@ Adjustment<-cbind(hfa_list,weight_list)
 stack=list()
 for(teamN in team_name){
   
-  
-
 inital_year=2000
-
 
 # Optimal weight from code above. If the above code is run first, the line below can be commented out. Otherwise, you can type the optimal k-value below without needing to run the chunk of code above.
 for(i in 1:nrow(Adjustment)){
-  
-
 
 weight = Adjustment[i,"weight_list"]
 hfa =Adjustment[i,"hfa_list"]
@@ -254,18 +239,8 @@ for(i in 1:nrow(scores)) {
 temp=transform(team_results,postgame_elo=as.numeric(postgame_elo))
 # Store the elo into the list
 stack=append(stack,mean(temp$postgame_elo))
-
-
-
-
-
 }
-
-
-
-
 }
-
 ```
 
 ## Clean elo rating for each team and store everything in to df
@@ -291,24 +266,15 @@ df[2,30]=1400
 df[3,"Charlotte Hornets"]=1400
 df[4,"Charlotte Hornets"]=1400
 
-
+print(df)
 ```
 
-
-```{r}
-df
-
-```
-## Save elo into csv file
+## Save elo into csv file and import elo data
 ```{r}
 write.csv(df,"elo.csv",row.names = FALSE)
-```
 
-# import elo data
-```{r}
 df=read.csv("elo.csv")
 ```
-
 
 ## Analysize data store mean, median and sd in the list
 ```{r}
@@ -322,10 +288,7 @@ for(i in colnames(df)){
   mean_stack=append(mean_stack,mean(df[,i]))
   sd_stack=append(sd_stack,sd(df[,i]))
   median_stack=append(median_stack,median(df[,i]))
-  
-  
 }
-
 ```
 
 ## Get Descriptive Statistics and store them in the descriptive dataframe
@@ -339,24 +302,17 @@ median_df=as.data.frame(do.call(rbind,median_stack))
 colnames(median_df)="median"
 descriptive_stat=cbind(colnames(df),mean_df,sd_df,median_df)
 colnames(descriptive_stat)=c("team","mean","sd","median")
-
-
-
 ```
-## store the Descriptive Statistics
+
+## store and import the Descriptive Statistics
 ```{r}
 write.csv(descriptive_stat,"descriptive.csv",row.names = FALSE)
-```
-## import Descriptive Statistics
-```{r}
+
 descriptive_stat=read.csv("descriptive.csv")
-
-
 ```
 
-
+## Reset the team name since the names have some changes
 ```{r}
-# Reset the team name since the names have some changes
 team_name=colnames(df)
 ```
 
@@ -371,9 +327,8 @@ for(i in team_name){
  plot.ts(df[,i],xlab = "Year from 2000 to 2020",  ylab = "Elo Rating",main = paste("Team: ",i))
   #axis(1,df$year)
 }
-
-
 ```
+
 ## Calculate autocrrelation and durbinWatsontest for the linear model
 ```{r}
 library(car)
@@ -388,9 +343,7 @@ for (i in team_name){
   cat("\n")
   cat("\n")
 }
-
 ```
-
 
 ## Get optimal order of autoregressive model
 ```{r}
@@ -411,8 +364,8 @@ for(i in team_name){
   
 }
 ```
-## Durbin-Watson test statistic and model
 
+## Durbin-Watson test statistic and model
 ```{r}
 library("tidyverse")
 # create a list to store the prediction for the next year average elo ratings
@@ -471,18 +424,10 @@ for(i in team_name){
   # run the durbinwatsonTest
   print(durbinWatsonTest(current_model))
 
-
-
-
 cat("\n")
 cat("\n")
-
 }
-
 ```
-
-
-
 
 # Get the prediction
 ```{r}
@@ -498,7 +443,6 @@ predict_result=as.data.frame(predict_result)
 # remove row name
 predict_result = predict_result %>% `rownames<-`( NULL )
 predict_result
-
 ```
 
 
