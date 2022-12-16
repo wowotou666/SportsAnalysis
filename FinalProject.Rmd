@@ -290,7 +290,7 @@ df
 ```{r}
 write.csv(df,"elo.csv",row.names = FALSE)
 
-
+```
 # import elo data
 ```{r}
 df=read.csv("elo.csv")
