@@ -399,6 +399,7 @@ for(i in TEAM){
 ## Durbin-Watson test statistic and model
 
 ```{r}
+result=list()
 library("tidyverse")
 #opt_order
 count=1
@@ -425,22 +426,29 @@ group=list()
   #current_team=subset(select(current_team,2:ncol(current_team)))
   current_model=lm(mymodel,data=current_team)
 cat(paste("Team: ",i))
-cat("\n")
-print(durbinWatsonTest(current_model))
 
 cat("\n")
 print(summary(current_model))
+
+prediction=tail(current_team,n=1)
+
+cat("The prediction for 2021 is the following\n")
+
+print(predict(current_model,prediction))
+
+cat("\n")
+print(durbinWatsonTest(current_model))
+
+
+
 
 cat("\n")
 cat("\n")
 
 }
 
-
-
-
-
 ```
+
 
 
 
